@@ -1,11 +1,11 @@
-import React, { useReducer, useState, useEffect, useCallback } from 'react';
+import React, { useReducer, useEffect, useCallback } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import ErrorModal from '../UI/ErrorModal';
 import Search from './Search';
 
-const ingredientReducer = (currentState, action) => {
+const ingredientReducer = (ingredientState, action) => {
   switch (action.type) {
     // Override current ingredients with a new array of ingredients
     case 'SET':
@@ -13,22 +13,38 @@ const ingredientReducer = (currentState, action) => {
 
     // Add an ingredient to the current state
     case 'ADD':
-      return [...currentState, action.ingredient]
+      return [...ingredientState, action.ingredient];
 
     // Remove an ingredient from the current state
     case 'DELETE':
-      return currentState.filter(ingredient => ingredient.id !== action.id)
-    
+      return ingredientState.filter(ingredient => ingredient.id !== action.id)
+
     default:
-      throw new Error (`Missing type in ingredientReducer: ${action.type}`)
+      throw new Error(`Missing type in ingredientReducer: ${action.type}`);
+  }
+}
+
+const httpReducer = (httpState, action) => {
+  switch (action.type) {
+    case 'REQUEST':
+      return { loading: true, error: null };
+    case 'RESPONSE':
+      return { ...httpState, loading: false }; // Using the spread operator to merge in new changes to our state object
+    case 'ERROR':
+      return { loading: false, error: action.error };
+    case 'RESET':
+      return { ...httpState, error: null };
+    default:
+      throw new Error(`Missing type in ingredientReducer: ${action.type}`);
   }
 }
 
 const Ingredients = () => {
   const [ingredientsState, dispatch] = useReducer(ingredientReducer, []);
+  const [httpState, httpDispatch] = useReducer(httpReducer, { loading: false, error: null });
   // const [ingredientsState, setIngredientsState] = useState([]);
-  const [loadingState, setLoadingState] = useState(false);
-  const [errorState, setErrorState] = useState(null);
+  // const [loadingState, setLoadingState] = useState(false);
+  // const [errorState, setErrorState] = useState(null);
 
   useEffect(() => {
     console.log('RENDERING INGREDIENTS', ingredientsState)
@@ -45,14 +61,17 @@ const Ingredients = () => {
   }, []);
 
   const addIngredientHandler = (ingredient) => {
-    setLoadingState(true);
+    // setLoadingState(true);
+    httpDispatch({ type: 'REQUEST' });
+
     fetch('https://react-hooks-1d6ad.firebaseio.com/ingredients.json', {
       method: 'POST',
       body: JSON.stringify(ingredient),
       headers: { 'Content-Type': 'application/json' }
     })
       .then(response => {
-        setLoadingState(false);
+        // setLoadingState(false);
+        httpDispatch({ type: 'RESPONSE' });
         return response.json();
       })
       .then(responseData => {
@@ -62,23 +81,33 @@ const Ingredients = () => {
         // ]);
         dispatch({
           type: 'ADD',
-          ingredient: {id: responseData.name, ...ingredient}
+          ingredient: { id: responseData.name, ...ingredient }
         });
       })
       .catch(error => {
         // Both state updates are batched together and executed synchronously in one render cycle.
-        setErrorState(error.message);
-        setLoadingState(false);
+        // setErrorState(error.message);
+        // setLoadingState(false);
+
+        httpDispatch({
+          type: 'ERROR',
+          error: error.message
+        });
+
       });
   }
 
   const removeIngredientHandler = (id) => {
-    setLoadingState(true);
+    // setLoadingState(true);
+    httpDispatch({ type: 'REQUEST' });
+
     fetch(`https://react-hooks-1d6ad.firebaseio.com/ingredients/${id}.json`, {
       method: 'DELETE'
     })
       .then(response => {
-        setLoadingState(false);
+        // setLoadingState(false);
+        httpDispatch({ type: 'RESPONSE' });
+
         // setIngredientsState(prevIngredients => prevIngredients.filter(item => item.id !== id))
         dispatch({
           type: 'DELETE',
@@ -87,21 +116,26 @@ const Ingredients = () => {
       })
       .catch(error => {
         // Both state updates are batched together and executed synchronously in one render cycle.
-        setErrorState(error.message);
-        setLoadingState(false);
+        // setErrorState(error.message);
+        // setLoadingState(false);
+
+        httpDispatch({
+          type: 'ERROR',
+          error: error.message
+        });
       });
   }
 
   const resetErrorMessageHandler = () => {
-    setErrorState(null);
+    httpDispatch({ type: 'RESET' });
   }
 
   return (
     <div className="App">
-      {errorState && <ErrorModal onClose={resetErrorMessageHandler}>{errorState}</ErrorModal>}
+      {httpState.error && <ErrorModal onClose={resetErrorMessageHandler}>{httpState.error}</ErrorModal>}
       <IngredientForm
         onAddIngredient={addIngredientHandler}
-        loading={loadingState}
+        loading={httpState.loading}
       />
 
       <section>
