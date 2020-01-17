@@ -1,12 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useReducer, useState, useEffect, useCallback } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import ErrorModal from '../UI/ErrorModal';
 import Search from './Search';
 
+const ingredientReducer = (currentState, action) => {
+  switch (action.type) {
+    // Override current ingredients with a new array of ingredients
+    case 'SET':
+      return action.ingredients;
+
+    // Add an ingredient to the current state
+    case 'ADD':
+      return [...currentState, action.ingredient]
+
+    // Remove an ingredient from the current state
+    case 'DELETE':
+      return currentState.filter(ingredient => ingredient.id !== action.id)
+    
+    default:
+      throw new Error (`Missing type in ingredientReducer: ${action.type}`)
+  }
+}
+
 const Ingredients = () => {
-  const [ingredientsState, setIngredientsState] = useState([]);
+  const [ingredientsState, dispatch] = useReducer(ingredientReducer, []);
+  // const [ingredientsState, setIngredientsState] = useState([]);
   const [loadingState, setLoadingState] = useState(false);
   const [errorState, setErrorState] = useState(null);
 
@@ -14,8 +34,14 @@ const Ingredients = () => {
     console.log('RENDERING INGREDIENTS', ingredientsState)
   }, [ingredientsState]);
 
+  // useCallback allows React to cache the function so it survives re-render cycles. 
+  // This causes the function not to change and prevents infinite loops.
   const filteredIngredientsHandler = useCallback((ingredients) => {
-    setIngredientsState(ingredients);
+    // setIngredientsState(ingredients);
+    dispatch({
+      type: 'SET',
+      ingredients: ingredients
+    });
   }, []);
 
   const addIngredientHandler = (ingredient) => {
@@ -30,10 +56,14 @@ const Ingredients = () => {
         return response.json();
       })
       .then(responseData => {
-        setIngredientsState(prevIngredients => [
-          ...prevIngredients,
-          { id: responseData.name, ...ingredient }
-        ]);
+        // setIngredientsState(prevIngredients => [
+        //   ...prevIngredients,
+        //   { id: responseData.name, ...ingredient }
+        // ]);
+        dispatch({
+          type: 'ADD',
+          ingredient: {id: responseData.name, ...ingredient}
+        });
       })
       .catch(error => {
         // Both state updates are batched together and executed synchronously in one render cycle.
@@ -44,12 +74,16 @@ const Ingredients = () => {
 
   const removeIngredientHandler = (id) => {
     setLoadingState(true);
-    fetch(`https://react-hooks-1d6ad.firebaseio.com/ingredients/${id}.jon`, {
+    fetch(`https://react-hooks-1d6ad.firebaseio.com/ingredients/${id}.json`, {
       method: 'DELETE'
     })
       .then(response => {
         setLoadingState(false);
-        setIngredientsState(prevIngredients => prevIngredients.filter(item => item.id !== id))
+        // setIngredientsState(prevIngredients => prevIngredients.filter(item => item.id !== id))
+        dispatch({
+          type: 'DELETE',
+          id: id
+        });
       })
       .catch(error => {
         // Both state updates are batched together and executed synchronously in one render cycle.
