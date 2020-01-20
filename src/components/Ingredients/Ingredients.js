@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useCallback } from 'react';
+import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
@@ -50,7 +50,7 @@ const Ingredients = () => {
     });
   }, []);
 
-  const addIngredientHandler = (ingredient) => {
+  const addIngredientHandler = useCallback((ingredient) => {
     httpDispatch({ type: 'REQUEST' });
 
     fetch('https://react-hooks-1d6ad.firebaseio.com/ingredients.json', {
@@ -74,9 +74,9 @@ const Ingredients = () => {
           error: error.message
         });
       });
-  }
+  }, []);
 
-  const removeIngredientHandler = (id) => {
+  const removeIngredientHandler = useCallback((id) => {
     httpDispatch({ type: 'REQUEST' });
 
     fetch(`https://react-hooks-1d6ad.firebaseio.com/ingredients/${id}.json`, {
@@ -96,11 +96,22 @@ const Ingredients = () => {
           error: error.message
         });
       });
-  }
+  }, []);
 
-  const resetErrorMessageHandler = () => {
+  const resetErrorMessageHandler = useCallback(() => {
     httpDispatch({ type: 'RESET' });
-  }
+  }, []);
+
+  // With useMemo you can store any data that you don't want to re-create on every re-render cycle
+  // Typically you would want to use React.memo to store components instead of useMemo
+  const ingredietList = useMemo(() => {
+    return (
+      <IngredientList
+        ingredients={ingredientsState}
+        onRemoveItem={removeIngredientHandler}
+      />
+    );
+  }, [ingredientsState, removeIngredientHandler]);
 
   return (
     <div className="App">
@@ -112,10 +123,7 @@ const Ingredients = () => {
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />
-        <IngredientList
-          ingredients={ingredientsState}
-          onRemoveItem={removeIngredientHandler}
-        />
+        {ingredietList}
         {/* Need to add list here! */}
       </section>
     </div>
