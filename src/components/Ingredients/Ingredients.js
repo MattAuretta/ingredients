@@ -5,6 +5,8 @@ import IngredientList from './IngredientList';
 import ErrorModal from '../UI/ErrorModal';
 import Search from './Search';
 
+import useHttp from '../../hooks/http';
+
 const ingredientReducer = (ingredientState, action) => {
   switch (action.type) {
     case 'SET':     // Override current ingredients with a new array of ingredients
@@ -12,22 +14,8 @@ const ingredientReducer = (ingredientState, action) => {
     case 'ADD':     // Add an ingredient to the current state
       return [...ingredientState, action.ingredient];
     case 'DELETE':  // Remove an ingredient from the current state
+      console.log("DELETE")
       return ingredientState.filter(ingredient => ingredient.id !== action.id)
-    default:
-      throw new Error(`Missing type in ingredientReducer: ${action.type}`);
-  }
-}
-
-const httpReducer = (httpState, action) => {
-  switch (action.type) {
-    case 'REQUEST':
-      return { loading: true, error: null };
-    case 'RESPONSE':
-      return { ...httpState, loading: false }; // Using the spread operator to merge in new changes to our state object
-    case 'ERROR':
-      return { loading: false, error: action.error };
-    case 'RESET':
-      return { ...httpState, error: null };
     default:
       throw new Error(`Missing type in ingredientReducer: ${action.type}`);
   }
@@ -35,11 +23,18 @@ const httpReducer = (httpState, action) => {
 
 const Ingredients = () => {
   const [ingredientsState, ingredientsDispatch] = useReducer(ingredientReducer, []);
-  const [httpState, httpDispatch] = useReducer(httpReducer, { loading: false, error: null });
+  const { data, error, id, ingredient, loading, resetError, sendRequest } = useHttp();
 
   useEffect(() => {
-    console.log('RENDERING INGREDIENTS', ingredientsState)
-  }, [ingredientsState]);
+    if (id && !error) {
+      ingredientsDispatch({ type: 'DELETE', id: id });
+    } else if (ingredient && data && !error) {
+      ingredientsDispatch({
+        type: 'ADD',
+        ingredient: { id: data.name, ...ingredient }
+      });
+    }
+  }, [data, id, ingredient]);
 
   // useCallback allows React to cache the function so it survives re-render cycles. 
   // This causes the function not to change and prevents infinite loops.
@@ -51,56 +46,16 @@ const Ingredients = () => {
   }, []);
 
   const addIngredientHandler = useCallback((ingredient) => {
-    httpDispatch({ type: 'REQUEST' });
-
-    fetch('https://react-hooks-1d6ad.firebaseio.com/ingredients.json', {
-      method: 'POST',
-      body: JSON.stringify(ingredient),
-      headers: { 'Content-Type': 'application/json' }
-    })
-      .then(response => {
-        httpDispatch({ type: 'RESPONSE' });
-        return response.json();
-      })
-      .then(responseData => {
-        ingredientsDispatch({
-          type: 'ADD',
-          ingredient: { id: responseData.name, ...ingredient }
-        });
-      })
-      .catch(error => {
-        httpDispatch({
-          type: 'ERROR',
-          error: error.message
-        });
-      });
-  }, []);
+    sendRequest('https://react-hooks-1d6ad.firebaseio.com/ingredients.json', 'POST', JSON.stringify(ingredient), null, ingredient);
+  }, [sendRequest]);
 
   const removeIngredientHandler = useCallback((id) => {
-    httpDispatch({ type: 'REQUEST' });
-
-    fetch(`https://react-hooks-1d6ad.firebaseio.com/ingredients/${id}.json`, {
-      method: 'DELETE'
-    })
-      .then(response => {
-        httpDispatch({ type: 'RESPONSE' });
-
-        ingredientsDispatch({
-          type: 'DELETE',
-          id: id
-        });
-      })
-      .catch(error => {
-        httpDispatch({
-          type: 'ERROR',
-          error: error.message
-        });
-      });
-  }, []);
+    sendRequest(`https://react-hooks-1d6ad.firebaseio.com/ingredients/${id}.json`, 'DELETE', null, id, null);
+  }, [sendRequest]);
 
   const resetErrorMessageHandler = useCallback(() => {
-    httpDispatch({ type: 'RESET' });
-  }, []);
+    resetError();
+  }, [resetError]);
 
   // With useMemo you can store any data that you don't want to re-create on every re-render cycle
   // Typically you would want to use React.memo to store components instead of useMemo
@@ -115,10 +70,10 @@ const Ingredients = () => {
 
   return (
     <div className="App">
-      {httpState.error && <ErrorModal onClose={resetErrorMessageHandler}>{httpState.error}</ErrorModal>}
+      {error && <ErrorModal onClose={resetErrorMessageHandler}>{error}</ErrorModal>}
       <IngredientForm
         onAddIngredient={addIngredientHandler}
-        loading={httpState.loading}
+        loading={loading}
       />
 
       <section>
