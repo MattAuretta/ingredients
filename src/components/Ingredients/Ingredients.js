@@ -14,15 +14,31 @@ const ingredientReducer = (ingredientState, action) => {
     case 'ADD':     // Add an ingredient to the current state
       return [...ingredientState, action.ingredient];
     case 'DELETE':  // Remove an ingredient from the current state
-      console.log("DELETE")
       return ingredientState.filter(ingredient => ingredient.id !== action.id)
     default:
       throw new Error(`Missing type in ingredientReducer: ${action.type}`);
   }
 }
 
+const initialEditState = {
+  inUse: false,
+  amount: null,
+  id: null,
+  title: null
+}
+
+const editReducer = (editState, action) => {
+  switch (action.type) {
+    case 'EDIT':
+      return {inUse: true, ...action.editFields}
+    case 'RESET':
+      return initialEditState
+  }
+}
+
 const Ingredients = () => {
   const [ingredientsState, ingredientsDispatch] = useReducer(ingredientReducer, []);
+  const [editState, editDispatch] = useReducer(editReducer, initialEditState);
   const { data, error, id, ingredient, loading, resetError, sendRequest } = useHttp();
 
   useEffect(() => {
@@ -45,6 +61,21 @@ const Ingredients = () => {
     });
   }, []);
 
+  const resetEditHandler = useCallback(() => {
+    editDispatch({ type: 'RESET' })
+  }, []);
+
+  const editHandler = useCallback((id, title, amount) => {
+    editDispatch({ 
+      type: 'EDIT',
+      editFields: {
+        id: id,
+        title: title,
+        amount: amount
+      }
+    });
+  }, []);
+
   const addIngredientHandler = useCallback((ingredient) => {
     sendRequest('https://react-hooks-1d6ad.firebaseio.com/ingredients.json', 'POST', JSON.stringify(ingredient), null, ingredient);
   }, [sendRequest]);
@@ -59,14 +90,17 @@ const Ingredients = () => {
 
   // With useMemo you can store any data that you don't want to re-create on every re-render cycle
   // Typically you would want to use React.memo to store components instead of useMemo
-  const ingredietList = useMemo(() => {
-    return (
-      <IngredientList
-        ingredients={ingredientsState}
-        onRemoveItem={removeIngredientHandler}
-      />
-    );
-  }, [ingredientsState, removeIngredientHandler]);
+  // const ingredientList = useMemo(() => {
+  //   return (
+  //     <IngredientList
+  //       ingredients={ingredientsState}
+  //       onRemoveItem={removeIngredientHandler}
+  //       onEdit={editHandler}
+  //       resetEdit={resetEditHandler}
+  //       editState={editState}
+  //     />
+  //   );
+  // }, [ingredientsState, removeIngredientHandler]);
 
   return (
     <div className="App">
@@ -78,8 +112,13 @@ const Ingredients = () => {
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />
-        {ingredietList}
-        {/* Need to add list here! */}
+        <IngredientList
+        ingredients={ingredientsState}
+        onRemoveItem={removeIngredientHandler}
+        onEdit={editHandler}
+        resetEdit={resetEditHandler}
+        editState={editState}
+      />
       </section>
     </div>
   );

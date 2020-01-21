@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import Card from '../UI/Card';
 import LoadingIndicator from '../UI/LoadingIndicator';
 import './IngredientForm.css';
 
 const IngredientForm = React.memo(props => {
-  const [ titleState, setTitleState ] = useState('');
-  const [ amountState, setAmountState ] = useState('');
+  const [titleState, setTitleState] = useState('');
+  const [amountState, setAmountState] = useState('');
   console.log('RENDERING INGREDIENT FORM');
 
-  const submitHandler = event => {
+  useEffect(() => {
+    if (props.editFields) {
+      setTitleState(props.editFields.title);
+      setAmountState(props.editFields.amount);
+    }
+  }, [props.editFields])
+
+  const addIngredientHandler = event => {
     event.preventDefault();
     props.onAddIngredient({
       title: titleState,
@@ -17,10 +24,14 @@ const IngredientForm = React.memo(props => {
     });
   };
 
+  const editIngredientHandler = event => {
+    event.preventDefault();
+    props.onEditIngredient();
+  };
+
   return (
     <section className="ingredient-form">
       <Card>
-        <form onSubmit={submitHandler}>
           <div className="form-control">
             <label htmlFor="title">Name</label>
             <input
@@ -44,10 +55,9 @@ const IngredientForm = React.memo(props => {
             />
           </div>
           <div className="ingredient-form__actions">
-            <button type="submit">Add Ingredient</button>
+            {props.editFields ? <button onClick={editIngredientHandler}>Edit Ingredient</button> : <button onClick={addIngredientHandler}>Add Ingredient</button>}
             {props.loading && <LoadingIndicator />}
           </div>
-        </form>
       </Card>
     </section>
   );

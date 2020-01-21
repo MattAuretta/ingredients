@@ -39,7 +39,6 @@ const useHttp = () => {
         })
             .then(response => response.json())
             .then(responseData => {
-                console.log(responseData)
                 httpDispatch({
                     type: 'RESPONSE',
                     responseData: responseData,
