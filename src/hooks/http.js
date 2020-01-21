@@ -5,7 +5,8 @@ const initialState = {
     error: null,
     data: null,
     id: null,
-    ingredient: null
+    ingredient: null,
+    edit: null
 }
 
 const httpReducer = (httpState, action) => {
@@ -13,7 +14,7 @@ const httpReducer = (httpState, action) => {
         case 'REQUEST':
             return { loading: true, error: null, data: null, id: null, ingredient: null };
         case 'RESPONSE':
-            return { ...httpState, loading: false, data: action.responseData, id: action.id, ingredient: action.ingredient }; // Using the spread operator to merge in new changes to our state object
+            return { ...httpState, loading: false, data: action.responseData, id: action.id, ingredient: action.ingredient, edit: action.edit }; // Using the spread operator to merge in new changes to our state object
         case 'ERROR':
             return { loading: false, error: action.error };
         case 'RESET':
@@ -30,7 +31,7 @@ const useHttp = () => {
         httpDispatch({ type: 'RESET' });
     }, []);
 
-    const sendRequest = useCallback((url, method, body, id, ingredient) => {
+    const sendRequest = useCallback((url, method, body, id, ingredient, edit) => {
         httpDispatch({ type: 'REQUEST' });
         fetch(url, {
             method: method,
@@ -43,7 +44,8 @@ const useHttp = () => {
                     type: 'RESPONSE',
                     responseData: responseData,
                     id: id,
-                    ingredient: ingredient
+                    ingredient: ingredient,
+                    edit: edit
                 });
             })
             .catch(error => {
@@ -56,6 +58,7 @@ const useHttp = () => {
 
     return {
         data: httpState.data,
+        edit: httpState.edit,
         error: httpState.error,
         id: httpState.id,
         ingredient: httpState.ingredient,

@@ -26,7 +26,10 @@ const IngredientForm = React.memo(props => {
 
   const editIngredientHandler = event => {
     event.preventDefault();
-    props.onEditIngredient();
+    props.onEditIngredient({
+      title: titleState,
+      amount: amountState
+    }, props.editFields.id);
   };
 
   return (

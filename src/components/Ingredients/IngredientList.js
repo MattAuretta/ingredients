@@ -1,12 +1,10 @@
 import React from 'react';
 
-import EditModal from '../UI/EditModal';
 import './IngredientList.css';
 
 const IngredientList = React.memo(props => {
   return (
     <section className="ingredient-list">
-      {props.editState.inUse && <EditModal onClose={props.resetEdit} editFields={props.editState}></EditModal>}
       <h2>Loaded Ingredients</h2>
       <ul>
         {props.ingredients.map(ig => (
